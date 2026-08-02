@@ -3,11 +3,14 @@ FastAPI application entrypoint.
 """
 from contextlib import asynccontextmanager
 
+import app.models
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.database import async_engine, Base
 from app.core.logging_config import setup_logging, logger
 from app.core.rate_limit import RateLimitMiddleware
 from app.api.router import api_router
@@ -17,7 +20,15 @@ from app.api.router import api_router
 async def lifespan(app: FastAPI):
     setup_logging()
     logger.info(f"Starting {settings.PROJECT_NAME} in {settings.ENVIRONMENT} mode")
+
+    # Automatically create all database tables
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    logger.info("Database tables created successfully")
+
     yield
+
     logger.info("Shutting down")
 
 
@@ -38,23 +49,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.add_middleware(RateLimitMiddleware)
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    logger.exception(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    logger.exception(
+        f"Unhandled exception on {request.method} {request.url.path}: {exc}"
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": settings.PROJECT_NAME}
+    return {
+        "status": "ok",
+        "service": settings.PROJECT_NAME,
+    }
 
 
 @app.get("/")
 async def root():
-    return {"message": f"{settings.PROJECT_NAME} API", "docs": "/api/docs"}
+    return {
+        "message": f"{settings.PROJECT_NAME} API",
+        "docs": "/api/docs",
+    }
 
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
