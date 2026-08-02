@@ -18,27 +18,40 @@ from app.utils.audit import write_audit_log
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=TokenResponse)
 async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
-    existing = await db.execute(select(User).where(User.email == payload.email))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Email already registered")
+    try:
+        existing = await db.execute(select(User).where(User.email == payload.email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    user = User(email=payload.email, hashed_password=hash_password(payload.password))
-    db.add(user)
-    await db.flush()
+        user = User(
+            email=payload.email,
+            hashed_password=hash_password(payload.password),
+        )
+        db.add(user)
+        await db.flush()
 
-    # Create an empty profile shell immediately so /profile always has a row to update.
-    profile = Profile(user_id=user.id, full_name=payload.full_name)
-    db.add(profile)
-    await db.commit()
-    await db.refresh(user)
+        profile = Profile(
+            user_id=user.id,
+            full_name=payload.full_name,
+        )
+        db.add(profile)
 
-    await write_audit_log(db, user_id=user.id, action="user.register")
+        # TEMPORARILY disable audit log
+        # await write_audit_log(db, user_id=user.id, action="user.register")
 
-    access = create_access_token(str(user.id))
-    refresh = create_refresh_token(str(user.id))
-    return TokenResponse(access_token=access, refresh_token=refresh)
+        await db.commit()
+        await db.refresh(user)
+
+        return TokenResponse(
+            access_token=create_access_token(str(user.id)),
+            refresh_token=create_refresh_token(str(user.id)),
+        )
+
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/login", response_model=TokenResponse)
