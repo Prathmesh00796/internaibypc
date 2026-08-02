@@ -96,7 +96,7 @@ export default function ProfilePage() {
             {uploading ? (
               <><Loader2 size={16} className="animate-spin" /> Uploading & parsing...</>
             ) : (
-              <><Upload size={16} /> Upload PDF resume — we'll auto-fill your profile</>
+              <><Upload size={16} /> Upload PDF resume — we&apos;ll auto-fill your profile</>
             )}
           </label>
 

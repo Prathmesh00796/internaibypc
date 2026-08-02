@@ -46,7 +46,9 @@ export default function ApplicationsPage() {
     <div className="space-y-6 animate-fade-up">
       <div>
         <h1 className="font-display text-2xl font-semibold">Applications</h1>
-        <p className="text-sm text-ink-secondary mt-1">Every application you've prepared or sent.</p>
+        <p className="text-sm text-ink-secondary mt-1">
+  Every application you&apos;ve prepared or sent.
+</p>
       </div>
 
       <div className="flex gap-2">
