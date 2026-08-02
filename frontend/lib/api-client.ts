@@ -1,9 +1,7 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
-  : "/api/backend";
+const API_BASE = "https://internaibpc.onrender.com/api/v1";
 
 export const api = axios.create({
   baseURL: API_BASE,
